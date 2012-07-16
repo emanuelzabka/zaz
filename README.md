@@ -1,0 +1,4 @@
+zaz
+===
+
+Command line aliasing
