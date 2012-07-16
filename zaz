@@ -1,0 +1,109 @@
+#!/bin/bash
+
+function getDbFile() {
+	script=$(readlink -f "$1")
+	directory=$(dirname "$script")
+	echo "$directory/db"
+}
+
+if [ $# -ge 1 ]; then
+	dbfile=$(getDbFile "$0")
+	if ! [ -f $dbfile ]; then
+		touch "$dbfile"
+		if [! -f $dbfile ]; then
+			echo "Banco de dados de comandos não pôde ser escrito"; exit 1
+		fi;
+	fi
+	case "$1" in
+		"--help")
+			echo "Utilitário para criação de aliases de acesso rápido a comandos."
+			echo ""
+			echo "Sintaxe: "
+			echo $(basename "$0")" [--edit|--list|--show <alias>|<alias>]"
+			echo "	--edit: Abre editor padrão para edição dos aliases existentes"
+			echo "	--list: Lista os aliases existentes"
+			echo "	--show <alias>: Exibe comando definido para o alias"
+			;;
+		"--edit")
+			echo "Para modificar os aliases edite o arquivo: '$dbfile'"
+			echo "Um alias por linha no formato: <alias>;<comando>"
+			echo
+			echo "-- Pressione qualquer tecla para continuar --"
+			read -s -n 1
+			if [ "$EDITOR" == "" ]; then
+				echo "Editor padrão do sistema (variável EDITOR) não configurado."
+				exit 1
+			fi
+			exec $EDITOR "$dbfile"
+			;;
+		"--show")
+			alias="$2"
+			IFS="
+"
+			for l in `cat "$dbfile"`; do
+				# Trim
+				l=$(echo "$l" | sed 's/^\s*\(.*\)\s*$/\1/')
+				if [ "$l" != "" ]; then
+					index=$(echo "$l" | cut -d \; -f 1)
+					if [ "$index" == "$alias" ]; then
+						value=$(echo "$l" | sed 's/^[^;]\+;//')
+						echo "$value"
+						break
+					fi
+				fi;
+				let i++
+			done
+			unset IFS
+			;;
+		"--list")
+			i=0
+			IFS="
+"
+			for l in `cat "$dbfile"`; do
+				# Trim
+				l=$(echo "$l" | sed 's/^\s*\(.*\)\s*$/\1/')
+				if [ "$l" != "" ]; then
+					index=$(echo "$l" | cut -d \; -f 1)
+					echo -n "$index	"
+				fi;
+				let i++
+			done
+			echo
+			unset IFS
+		;;
+		*)
+			alias="$1"
+			cmd=""
+			IFS="
+"
+			for l in `cat "$dbfile"`; do
+				# Trim
+				l=$(echo "$l" | sed 's/^\s*\(.*\)\s*$/\1/')
+				if [ "$l" != "" ]; then
+					index=$(echo "$l" | cut -d \; -f 1)
+					value=$(echo "$l" | sed 's/^[^;]\+;//')
+					if [ "$index" == "$alias" ]; then
+						cmd="$value"
+					fi
+				fi;
+			done
+			unset IFS
+			# New command
+			if [ "$cmd" == "" ]; then
+				echo "Alias não encontrado. Digite o novo comando ou deixe em branco para cancelar: "
+				read cmd
+				# Trim
+				cmd=$(echo "$cmd" | sed 's/^\s*\(.*\)\s*$/\1/')
+				if [ "$cmd" != "" ]; then
+					# Trim
+					alias=$(echo "$alias" | sed 's/^\s*\(.*\)\s*$/\1/')
+					echo "$alias;$cmd" >> "$dbfile"
+					sort "$dbfile" -o "$dbfile"
+				fi
+			fi
+			if [ "$cmd" != "" ]; then
+				exec $cmd
+			fi
+		;;
+	esac
+fi
