@@ -6,7 +6,7 @@ function getDbFile() {
 	echo "$directory/db"
 }
 
-if [ $# -ge 1 ]; then
+#if [ $# -ge 1 ]; then
 	dbfile=$(getDbFile "$0")
 	if ! [ -f $dbfile ]; then
 		touch "$dbfile"
@@ -56,7 +56,6 @@ if [ $# -ge 1 ]; then
 			unset IFS
 			;;
 		"--list")
-			i=0
 			IFS="
 "
 			for l in `cat "$dbfile"`; do
@@ -64,15 +63,39 @@ if [ $# -ge 1 ]; then
 				l=$(echo "$l" | sed 's/^\s*\(.*\)\s*$/\1/')
 				if [ "$l" != "" ]; then
 					index=$(echo "$l" | cut -d \; -f 1)
-					echo -n "$index	"
-				fi;
-				let i++
+					echo "$index"
+				fi
 			done
-			echo
 			unset IFS
 		;;
 		*)
 			alias="$1"
+			# Show menu for selection
+			if [ "$alias" == "" ]; then
+				aliases=""
+				IFS="
+"
+				# Get options (all indexes)
+				for l in `cat "$dbfile"`; do
+					index=$(echo "$l" | cut -d \; -f 1)
+					if [ "$index" != "" ]; then
+						aliases="$aliases $index";
+					fi
+				done
+				unset IFS
+				aliases="$aliases None";
+				select o in $aliases; do
+					case "$o" in
+						"None")
+							exit 0
+							break
+							;;
+						*)
+							alias="$o"
+							break
+					esac
+				done
+			fi
 			cmd=""
 			IFS="
 "
@@ -106,4 +129,4 @@ if [ $# -ge 1 ]; then
 			fi
 		;;
 	esac
-fi
+#fi
