@@ -87,7 +87,6 @@ function getDbFile() {
 				select o in $aliases; do
 					case "$o" in
 						"None")
-							exit 0
 							break
 							;;
 						*)
@@ -95,6 +94,9 @@ function getDbFile() {
 							break
 					esac
 				done
+			fi
+			if [ "$alias" == "" ]; then
+				exit 0
 			fi
 			cmd=""
 			IFS="
